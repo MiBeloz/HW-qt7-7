@@ -46,7 +46,10 @@ public:
 private slots:
     void on_pb_path_clicked();
     void on_pb_start_clicked();
+    void Rcv_GraphicReady();
 
+signals:
+    void sig_GraphicReady();
 
 
 private:
@@ -60,7 +63,6 @@ private:
 
 
     //Код ДЗ
-    GraphicChart* pGraphClass;
     GraphicForm* pGraphicForm;
     QChart* pChart;
     QChartView* pChartView;

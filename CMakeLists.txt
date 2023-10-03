@@ -18,8 +18,6 @@ set(PROJECT_SOURCES
         mainwindow.cpp
         mainwindow.h
         mainwindow.ui
-        graphicchart.cpp
-        graphicchart.h
         graphicform.cpp
         graphicform.h
         graphicform.ui

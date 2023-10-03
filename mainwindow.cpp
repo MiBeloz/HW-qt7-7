@@ -8,17 +8,13 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     ui->pb_clearResult->setCheckable(true);
 
-    //Код ДЗ
     pGraphicForm = new GraphicForm(this);
+    pGridLayout = new QGridLayout(this);
     pChart = new QChart();
-    pChart->legend()->setVisible(false);
     pChartView = new QChartView(pChart);
-    pGraphClass = new GraphicChart(1);
-    pGridLayout = new QGridLayout;
-    pGraphicForm->setLayout(pGridLayout);
-    pGridLayout->addWidget(pChartView);
-    pChartView->show();
-    pChartView->hide();
+    pChart->legend()->setVisible(false);
+    connect(this, &MainWindow::sig_GraphicReady, this, &MainWindow::Rcv_GraphicReady);
+
 
     //Этот код сделан только ради тренировки и усвоения материала
     connect(&ftrWtReadFile, &QFutureWatcher<QVector<uint32_t>>::finished, this, [&]{
@@ -46,11 +42,8 @@ MainWindow::~MainWindow()
 {
     delete ui;
 
-    //Код ДЗ
-    delete pGraphicForm;
     delete pChart;
     delete pChartView;
-    delete pGridLayout;
 }
 
 
@@ -144,59 +137,30 @@ QVector<double> MainWindow::ProcessFile(const QVector<uint32_t> dataFile)
 
 QVector<double> MainWindow::FindMax(QVector<double> resultData)
 {
-    //auto findMax = [&](QVector<double> resultData){
-//    QVector<double> x;
-//    QVector<double> y;
+    QVector<double> x;
+    QVector<double> y;
+    QLineSeries *series = new QLineSeries;
+    double step = 0.1;
 
-//    double steps = 1000;
-//    x.resize(steps);
-//    x[0] = 0;
-//    for(int i = 1; i < steps; i++){
-//        x[i] = x[i-1] + 0.1;
-//    }
+    double minVal = 0;
+    double maxVal = 1000 + step;
 
-//    int size = 1000;
-//    if (size < resultData.size()) size == resultData.size();
-//    y.resize(size);
-//    for (int i = 0; i < size; ++i){
-//        y[i] = resultData[i];
-//    }
-
-//    pGraphClass->AddDataToGrahp(x, y, 1000);
-
-//    pGraphicForm->show();
-
-//    pGraphClass->UpdateGraph(pChart);
-//    pChartView->chart()->createDefaultAxes();
-//    pChartView->show( );
-    //};
-
-        QVector<double> x;
-        QVector<double> y;
-        double step = 0.1;
-
-        double minVal = 0;
-        double maxVal = 1000 + step;
-
-        double steps = round(((maxVal-minVal)/step));
-        x.resize(steps);
-        x[0] = minVal;
-        for(int i = 1; i < steps; i++){
-            x[i] = x[i-1]+step;
-        }
-
-        y.resize(steps);
-        for (int i = 0; i < steps; ++i){
+    double steps = round(((maxVal-minVal)/step));
+    x.resize(steps);
+    y.resize(steps);
+    x[0] = minVal;
+    for(int i = 1; i < steps; i++){
+        if (i == 0) {
             y[i] = resultData[i];
         }
-
-        pGraphClass->AddDataToGrahp(x, y, FIRST_GRAPH);
-
-        pGraphClass->UpdateGraph(pChart);
-        pChartView->chart()->createDefaultAxes();
-        pChartView->show();
-
-
+        else {
+            x[i] = x[i-1]+step;
+            y[i] = resultData[i];
+        }
+            series->append(x[i], y[i]);
+    }
+    pChart->addSeries(series);
+    emit sig_GraphicReady();
 
 
     double max = 0, sMax=0;
@@ -331,6 +295,14 @@ void MainWindow::on_pb_start_clicked()
     //Этот код сделан только ради тренировки и усвоения материала
     ftrReadFile = QtConcurrent::run([&]{ return ReadFile(pathToFile, numberSelectChannel); });
     ftrWtReadFile.setFuture(ftrReadFile);
+}
+
+void MainWindow::Rcv_GraphicReady()
+{
+    pGridLayout->addWidget(pChartView);
+    pGraphicForm->setLayout(pGridLayout);
+    pChartView->chart()->createDefaultAxes();
+    pChartView->show();
 }
 
 
