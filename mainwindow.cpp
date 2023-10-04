@@ -8,11 +8,65 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     ui->pb_clearResult->setCheckable(true);
 
-    pGraphicForm = new GraphicForm(this);
     pGridLayout = new QGridLayout(this);
     pChart = new QChart();
     pChartView = new QChartView(pChart);
     pChart->legend()->setVisible(false);
+
+    ui->chB_graphicShow->setChecked(true);
+    connect(ui->chB_graphicShow, &QCheckBox::clicked, this, [&]{
+        if (!ui->chB_graphicShow->isChecked()) {
+           ui->lb_time->setEnabled(false);
+           ui->lb_timeStart->setEnabled(false);
+           ui->lb_timeEnd->setEnabled(false);
+           ui->spB_timeStart->setEnabled(false);
+           ui->spB_timeEnd->setEnabled(false);
+           ui->pb_graphicShow->setEnabled(false);
+        }
+        else {
+            ui->lb_time->setEnabled(true);
+            ui->lb_timeStart->setEnabled(true);
+            ui->lb_timeEnd->setEnabled(true);
+            ui->spB_timeStart->setEnabled(true);
+            ui->spB_timeEnd->setEnabled(true);
+            ui->pb_graphicShow->setEnabled(true);
+        }
+    });
+    connect(ui->pb_graphicShow, &QPushButton::clicked, this, [&]{
+        if (pChart->series().size()){
+            ui->statusbar->setStyleSheet("color: default");
+            ui->statusbar->clearMessage();
+            pChartView->show();
+        }
+        else {
+            ui->statusbar->setStyleSheet("color: default");
+            ui->statusbar->showMessage("График еще не построен!");
+        }
+    });
+    connect(ui->spB_timeStart, &QSpinBox::textChanged, this, [&]{
+        if (ui->spB_timeStart->value() > ui->spB_timeEnd->value() - 100){
+            ui->spB_timeStart->setValue(ui->spB_timeEnd->value() - 100);
+            ui->statusbar->setStyleSheet("color: red");
+            ui->statusbar->showMessage("Время начала должно быть меньше времени конца!");
+        }
+        else {
+            ui->statusbar->setStyleSheet("color: default");
+            ui->statusbar->clearMessage();
+        }
+        pChart->removeAllSeries();
+    });
+    connect(ui->spB_timeEnd, &QSpinBox::textChanged, this, [&]{
+        if (ui->spB_timeEnd->value() < ui->spB_timeStart->value() + 100){
+            ui->spB_timeEnd->setValue(ui->spB_timeStart->value() + 100);
+            ui->statusbar->setStyleSheet("color: red");
+            ui->statusbar->showMessage("Время конца должно быть больше времени начала!");
+        }
+        else {
+            ui->statusbar->setStyleSheet("color: default");
+            ui->statusbar->clearMessage();
+        }
+        pChart->removeAllSeries();
+    });
     connect(this, &MainWindow::sig_GraphicReady, this, &MainWindow::Rcv_GraphicReady);
 
 
@@ -33,6 +87,42 @@ MainWindow::MainWindow(QWidget *parent)
         ftrWtFindMin.setFuture(ftrFindMin);
     });
     connect(&ftrWtFindMin, &QFutureWatcher<QVector<double>>::finished, this, [&]{
+        if (ui->chB_graphicShow->isChecked()) {
+            QVector<double> x;
+            QVector<double> y;
+            QLineSeries *series = new QLineSeries;
+            double step = 0.1;
+
+            double minVal = ui->spB_timeStart->value();
+            double maxVal = ui->spB_timeEnd->value() + step;
+
+            if (maxVal >= procesData.size() * step) {
+                maxVal = procesData.size() * step;
+                ui->spB_timeEnd->setValue(procesData.size() * step);
+            }
+            double steps = round(((maxVal - minVal) / step));
+
+            x.resize(steps);
+            y.resize(steps);
+            for(int i = 0; i < steps; i++){
+                if (i == 0) {
+                    x[i] = minVal;
+                }
+                else {
+                    x[i] = x[i - 1] + step;
+                }
+                y[i] = procesData[i + minVal];
+
+                series->append(x[i], y[i]);
+            }
+
+            if (pChart->series().size()) {
+                pChart->removeAllSeries();
+            }
+            pChart->addSeries(series);
+            emit sig_GraphicReady();
+        }
+
         mins = ftrFindMin.result();
         DisplayResult(mins, maxs);
     });
@@ -84,15 +174,12 @@ QVector<uint32_t> MainWindow::ReadFile(QString path, uint8_t numberChannel)
     uint32_t currentWorld = 0, sizeFrame = 0;
 
     while(dataStream.atEnd() == false){
-
         dataStream >> currentWorld;
 
         if(currentWorld == 0xFFFFFFFF){
-
             dataStream >> currentWorld;
 
             if(currentWorld < 0x80000000){
-
                 dataStream >> sizeFrame;
 
                 if(sizeFrame > 1500){
@@ -100,13 +187,10 @@ QVector<uint32_t> MainWindow::ReadFile(QString path, uint8_t numberChannel)
                 }
 
                 for(uint32_t i = 0; i < sizeFrame / sizeof(uint32_t); i++){
-
                     dataStream >> currentWorld;
 
                     if((currentWorld >> 24) == numberChannel){
-
                         readData.append(currentWorld);
-
                     }
                 }
             }
@@ -137,32 +221,6 @@ QVector<double> MainWindow::ProcessFile(const QVector<uint32_t> dataFile)
 
 QVector<double> MainWindow::FindMax(QVector<double> resultData)
 {
-    QVector<double> x;
-    QVector<double> y;
-    QLineSeries *series = new QLineSeries;
-    double step = 0.1;
-
-    double minVal = 0;
-    double maxVal = 1000 + step;
-
-    double steps = round(((maxVal-minVal)/step));
-    x.resize(steps);
-    y.resize(steps);
-    x[0] = minVal;
-    for(int i = 1; i < steps; i++){
-        if (i == 0) {
-            y[i] = resultData[i];
-        }
-        else {
-            x[i] = x[i-1]+step;
-            y[i] = resultData[i];
-        }
-            series->append(x[i], y[i]);
-    }
-    pChart->addSeries(series);
-    emit sig_GraphicReady();
-
-
     double max = 0, sMax=0;
     //Поиск первого максиума
     foreach (double num, resultData){
@@ -187,7 +245,6 @@ QVector<double> MainWindow::FindMax(QVector<double> resultData)
 
 QVector<double> MainWindow::FindMin(QVector<double> resultData)
 {
-
     double min = 0, sMin = 0;
     QThread::sleep(1);
     //Поиск первого максиума
@@ -207,7 +264,6 @@ QVector<double> MainWindow::FindMin(QVector<double> resultData)
     QVector<double> mins = {min, sMin};
     ui->chB_minSucess->setChecked(true);
     return mins;
-
 }
 
 void MainWindow::DisplayResult(QVector<double> mins, QVector<double> maxs)
@@ -272,7 +328,6 @@ void MainWindow::on_pb_start_clicked()
         numberSelectChannel = 0xED;
     }
 
-
 //    auto read = [&]{ return ReadFile(pathToFile, numberSelectChannel); };
 //    auto process = [&](QVector<uint32_t> res){ return ProcessFile(res);};
 //    auto findMax = [&](QVector<double> res){
@@ -280,11 +335,41 @@ void MainWindow::on_pb_start_clicked()
 //                                                mins = FindMin(res);
 //                                                DisplayResult(mins, maxs);
 
-//                                                /*
-//                                                 * Тут необходимо реализовать код наполнения серии
-//                                                 * и вызов сигнала для отображения графика
-//                                                 */
+//                                                if (ui->chB_graphicShow->isChecked()) {
+//                                                    QVector<double> x;
+//                                                    QVector<double> y;
+//                                                    QLineSeries *series = new QLineSeries;
+//                                                    double step = 0.1;
 
+//                                                    double minVal = ui->spB_timeStart->value();
+//                                                    double maxVal = ui->spB_timeEnd->value() + step;
+
+//                                                    if (maxVal >= procesData.size() * step) {
+//                                                        maxVal = procesData.size() * step;
+//                                                        ui->spB_timeEnd->setValue(procesData.size() * step);
+//                                                    }
+//                                                    double steps = round(((maxVal - minVal) / step));
+
+//                                                    x.resize(steps);
+//                                                    y.resize(steps);
+//                                                    for(int i = 0; i < steps; i++){
+//                                                        if (i == 0) {
+//                                                            x[i] = minVal;
+//                                                        }
+//                                                        else {
+//                                                            x[i] = x[i - 1] + step;
+//                                                        }
+//                                                        y[i] = procesData[i + minVal];
+
+//                                                        series->append(x[i], y[i]);
+//                                                    }
+
+//                                                    if (pChart->series().size()) {
+//                                                        pChart->removeAllSeries();
+//                                                    }
+//                                                    pChart->addSeries(series);
+//                                                    emit sig_GraphicReady();
+//                                                }
 //                                             };
 
 //    auto result = QtConcurrent::run(read)
@@ -299,9 +384,12 @@ void MainWindow::on_pb_start_clicked()
 
 void MainWindow::Rcv_GraphicReady()
 {
+    ui->statusbar->setStyleSheet("color: default");
+    ui->statusbar->clearMessage();
+
     pGridLayout->addWidget(pChartView);
-    pGraphicForm->setLayout(pGridLayout);
     pChartView->chart()->createDefaultAxes();
+    pChartView->resize(800, 400);
     pChartView->show();
 }
 

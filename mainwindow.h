@@ -14,9 +14,6 @@
 #include <QtCharts>
 #include <QChartView>
 
-#include "graphicchart.h"
-#include "graphicform.h"
-
 #define FD 1000.0 //частота дискретизации
 
 QT_BEGIN_NAMESPACE
@@ -63,10 +60,10 @@ private:
 
 
     //Код ДЗ
-    GraphicForm* pGraphicForm;
-    QChart* pChart;
-    QChartView* pChartView;
-    QGridLayout* pGridLayout;
+    QChart *pChart;
+    QChartView *pChartView;
+    QGridLayout *pGridLayout;
+    QValueAxis *pAxisX, *pAxisY;
 
 
     //Этот код сделан только ради тренировки и усвоения материала
