@@ -38,8 +38,6 @@ public:
     //Метод отображает результаты
     void DisplayResult(QVector<double> mins, QVector<double> maxs);
 
-
-
 private slots:
     void on_pb_path_clicked();
     void on_pb_start_clicked();
@@ -47,7 +45,6 @@ private slots:
 
 signals:
     void sig_GraphicReady();
-
 
 private:
     Ui::MainWindow *ui;
@@ -58,13 +55,9 @@ private:
     QVector<double> procesData;
     QVector<double> mins, maxs;
 
-
-    //Код ДЗ
     QChart *pChart;
     QChartView *pChartView;
     QGridLayout *pGridLayout;
-    QValueAxis *pAxisX, *pAxisY;
-
 
     //Этот код сделан только ради тренировки и усвоения материала
     QFuture<QVector<uint32_t>> ftrReadFile;

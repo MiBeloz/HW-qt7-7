@@ -9,9 +9,10 @@ MainWindow::MainWindow(QWidget *parent)
     ui->pb_clearResult->setCheckable(true);
 
     pGridLayout = new QGridLayout(this);
-    pChart = new QChart();
+    pChart = new QChart;
     pChartView = new QChartView(pChart);
     pChart->legend()->setVisible(false);
+    pChartView->setRenderHint(QPainter::Antialiasing);
 
     ui->chB_graphicShow->setChecked(true);
     connect(ui->chB_graphicShow, &QCheckBox::clicked, this, [&]{
@@ -39,7 +40,7 @@ MainWindow::MainWindow(QWidget *parent)
             pChartView->show();
         }
         else {
-            ui->statusbar->setStyleSheet("color: default");
+            ui->statusbar->setStyleSheet("color: red");
             ui->statusbar->showMessage("График еще не построен!");
         }
     });
@@ -71,61 +72,61 @@ MainWindow::MainWindow(QWidget *parent)
 
 
     //Этот код сделан только ради тренировки и усвоения материала
-    connect(&ftrWtReadFile, &QFutureWatcher<QVector<uint32_t>>::finished, this, [&]{
-        readData = ftrReadFile.result();
-        ftrProcessFile = QtConcurrent::run([&]{ return ProcessFile(readData);});
-        ftrWtProcessFile.setFuture(ftrProcessFile);
-    });
-    connect(&ftrWtProcessFile, &QFutureWatcher<QVector<double>>::finished, this, [&]{
-        procesData = ftrProcessFile.result();
-        ftrFindMax = QtConcurrent::run([&]{ return FindMax(procesData);});
-        ftrWtFindMax.setFuture(ftrFindMax);
-    });
-    connect(&ftrWtFindMax, &QFutureWatcher<QVector<double>>::finished, this, [&]{
-        maxs = ftrFindMax.result();
-        ftrFindMin = QtConcurrent::run([&]{ return FindMin(procesData);});
-        ftrWtFindMin.setFuture(ftrFindMin);
-    });
-    connect(&ftrWtFindMin, &QFutureWatcher<QVector<double>>::finished, this, [&]{
-        if (ui->chB_graphicShow->isChecked()) {
-            QVector<double> x;
-            QVector<double> y;
-            QLineSeries *series = new QLineSeries;
-            double step = 0.1;
+//    connect(&ftrWtReadFile, &QFutureWatcher<QVector<uint32_t>>::finished, this, [&]{
+//        readData = ftrReadFile.result();
+//        ftrProcessFile = QtConcurrent::run([&]{ return ProcessFile(readData);});
+//        ftrWtProcessFile.setFuture(ftrProcessFile);
+//    });
+//    connect(&ftrWtProcessFile, &QFutureWatcher<QVector<double>>::finished, this, [&]{
+//        procesData = ftrProcessFile.result();
+//        ftrFindMax = QtConcurrent::run([&]{ return FindMax(procesData);});
+//        ftrWtFindMax.setFuture(ftrFindMax);
+//    });
+//    connect(&ftrWtFindMax, &QFutureWatcher<QVector<double>>::finished, this, [&]{
+//        maxs = ftrFindMax.result();
+//        ftrFindMin = QtConcurrent::run([&]{ return FindMin(procesData);});
+//        ftrWtFindMin.setFuture(ftrFindMin);
+//    });
+//    connect(&ftrWtFindMin, &QFutureWatcher<QVector<double>>::finished, this, [&]{
+//        if (ui->chB_graphicShow->isChecked()) {
+//            QVector<double> x;
+//            QVector<double> y;
+//            QLineSeries *series = new QLineSeries(this);
+//            double step = 0.1;
 
-            double minVal = ui->spB_timeStart->value();
-            double maxVal = ui->spB_timeEnd->value() + step;
+//            double minVal = ui->spB_timeStart->value();
+//            double maxVal = ui->spB_timeEnd->value() + step;
 
-            if (maxVal >= procesData.size() * step) {
-                maxVal = procesData.size() * step;
-                ui->spB_timeEnd->setValue(procesData.size() * step);
-            }
-            double steps = round(((maxVal - minVal) / step));
+//            if (maxVal >= procesData.size() * step) {
+//                maxVal = procesData.size() * step;
+//                ui->spB_timeEnd->setValue(procesData.size() * step);
+//            }
+//            double steps = round(((maxVal - minVal) / step));
 
-            x.resize(steps);
-            y.resize(steps);
-            for(int i = 0; i < steps; i++){
-                if (i == 0) {
-                    x[i] = minVal;
-                }
-                else {
-                    x[i] = x[i - 1] + step;
-                }
-                y[i] = procesData[i + minVal];
+//            x.resize(steps);
+//            y.resize(steps);
+//            for(int i = 0; i < steps; i++){
+//                if (i == 0) {
+//                    x[i] = minVal;
+//                }
+//                else {
+//                    x[i] = x[i - 1] + step;
+//                }
+//                y[i] = procesData[i + minVal];
 
-                series->append(x[i], y[i]);
-            }
+//                series->append(x[i], y[i]);
+//            }
 
-            if (pChart->series().size()) {
-                pChart->removeAllSeries();
-            }
-            pChart->addSeries(series);
-            emit sig_GraphicReady();
-        }
+//            if (pChart->series().size()) {
+//                pChart->removeAllSeries();
+//            }
+//            pChart->addSeries(series);
+//            emit sig_GraphicReady();
+//        }
 
-        mins = ftrFindMin.result();
-        DisplayResult(mins, maxs);
-    });
+//        mins = ftrFindMin.result();
+//        DisplayResult(mins, maxs);
+//    });
 }
 
 MainWindow::~MainWindow()
@@ -277,7 +278,6 @@ void MainWindow::DisplayResult(QVector<double> mins, QVector<double> maxs)
     ui->te_Result->append("Второй максимум " + QString::number(maxs.at(1)));
 }
 
-
 /****************************************************/
 /*!
 @brief:	Обработчик клика на кнопку "Выбрать путь"
@@ -303,7 +303,6 @@ void MainWindow::on_pb_start_clicked()
 {
     //проверка на то, что файл выбран
     if(pathToFile.isEmpty()){
-
         QMessageBox mb;
         mb.setWindowTitle("Ошибка");
         mb.setText("Выберите файл!");
@@ -328,58 +327,59 @@ void MainWindow::on_pb_start_clicked()
         numberSelectChannel = 0xED;
     }
 
-//    auto read = [&]{ return ReadFile(pathToFile, numberSelectChannel); };
-//    auto process = [&](QVector<uint32_t> res){ return ProcessFile(res);};
-//    auto findMax = [&](QVector<double> res){
-//                                                maxs = FindMax(res);
-//                                                mins = FindMin(res);
-//                                                DisplayResult(mins, maxs);
+    auto read = [&]{ return ReadFile(pathToFile, numberSelectChannel); };
+    auto process = [&](QVector<uint32_t> res){ return ProcessFile(res);};
+    auto findMax = [&](QVector<double> res){
+                                                maxs = FindMax(res);
+                                                mins = FindMin(res);
+                                                DisplayResult(mins, maxs);
 
-//                                                if (ui->chB_graphicShow->isChecked()) {
-//                                                    QVector<double> x;
-//                                                    QVector<double> y;
-//                                                    QLineSeries *series = new QLineSeries;
-//                                                    double step = 0.1;
+                                                if (ui->chB_graphicShow->isChecked()) {
+                                                    QVector<double> x;
+                                                    QVector<double> y;
+                                                    QLineSeries *series = new QLineSeries(this);
+                                                    double step = 0.1;
 
-//                                                    double minVal = ui->spB_timeStart->value();
-//                                                    double maxVal = ui->spB_timeEnd->value() + step;
+                                                    double minVal = ui->spB_timeStart->value();
+                                                    double maxVal = ui->spB_timeEnd->value() + step;
 
-//                                                    if (maxVal >= procesData.size() * step) {
-//                                                        maxVal = procesData.size() * step;
-//                                                        ui->spB_timeEnd->setValue(procesData.size() * step);
-//                                                    }
-//                                                    double steps = round(((maxVal - minVal) / step));
+                                                    if (maxVal >= res.size() * step) {
+                                                        maxVal = res.size() * step;
+                                                        ui->spB_timeEnd->setValue(res.size() * step);
+                                                    }
+                                                    double steps = round(((maxVal - minVal) / step));
 
-//                                                    x.resize(steps);
-//                                                    y.resize(steps);
-//                                                    for(int i = 0; i < steps; i++){
-//                                                        if (i == 0) {
-//                                                            x[i] = minVal;
-//                                                        }
-//                                                        else {
-//                                                            x[i] = x[i - 1] + step;
-//                                                        }
-//                                                        y[i] = procesData[i + minVal];
+                                                    x.resize(steps);
+                                                    y.resize(steps);
+                                                    for(int i = 0; i < steps; i++){
+                                                        if (i == 0) {
+                                                            x[i] = minVal;
+                                                        }
+                                                        else {
+                                                            x[i] = x[i - 1] + step;
+                                                        }
+                                                        y[i] = res[i + minVal];
 
-//                                                        series->append(x[i], y[i]);
-//                                                    }
+                                                        series->append(x[i], y[i]);
+                                                    }
 
-//                                                    if (pChart->series().size()) {
-//                                                        pChart->removeAllSeries();
-//                                                    }
-//                                                    pChart->addSeries(series);
-//                                                    emit sig_GraphicReady();
-//                                                }
-//                                             };
+                                                    if (pChart->series().size()) {
+                                                        pChart->removeAllSeries();
+                                                    }
+                                                    pChart->addSeries(series);
 
-//    auto result = QtConcurrent::run(read)
-//                               .then(process)
-//                               .then(findMax);
+                                                    emit sig_GraphicReady();
+                                                }
+    };
+
+    auto result = QtConcurrent::run(read)
+                               .then(process)
+                               .then(this, findMax);
 
 
     //Этот код сделан только ради тренировки и усвоения материала
-    ftrReadFile = QtConcurrent::run([&]{ return ReadFile(pathToFile, numberSelectChannel); });
-    ftrWtReadFile.setFuture(ftrReadFile);
+//    ftrReadFile = QtConcurrent::run([&]{ return ReadFile(pathToFile, numberSelectChannel); });
+//    ftrWtReadFile.setFuture(ftrReadFile);
 }
 
 void MainWindow::Rcv_GraphicReady()
